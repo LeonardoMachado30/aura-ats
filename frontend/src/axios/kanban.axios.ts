@@ -167,10 +167,45 @@ export const criarQuadroKanban = async (
   );
 };
 
+export interface KanbanFiltrosInput {
+  usuarioSistemaId?: string;
+  titulo?: string;
+  descricao?: string;
+  membroIds?: string[];
+  ordenarPor?: 'criadoEm' | 'titulo' | 'ordem';
+  ordemDirecao?: 'asc' | 'desc';
+}
+
 export const obterQuadroCompleto = async (
-  id: string
+  id: string,
+  filtros?: KanbanFiltrosInput
 ): Promise<QuadroCompleto> => {
-  const response = await api.get(`/api/externalWithAuth/kanban/quadro/${id}`);
+  const params: Record<string, string> = {};
+
+  if (filtros) {
+    if (filtros.usuarioSistemaId) {
+      params.usuarioSistemaId = filtros.usuarioSistemaId;
+    }
+    if (filtros.titulo) {
+      params.titulo = filtros.titulo;
+    }
+    if (filtros.descricao) {
+      params.descricao = filtros.descricao;
+    }
+    if (filtros.membroIds && filtros.membroIds.length > 0) {
+      params.membroIds = filtros.membroIds.join(',');
+    }
+    if (filtros.ordenarPor) {
+      params.ordenarPor = filtros.ordenarPor;
+    }
+    if (filtros.ordemDirecao) {
+      params.ordemDirecao = filtros.ordemDirecao;
+    }
+  }
+
+  const response = await api.get(`/api/externalWithAuth/kanban/quadro/${id}`, {
+    params,
+  });
   return validateResponse(
     response.data,
     quadroCompletoSchema,

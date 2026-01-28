@@ -85,3 +85,12 @@ export interface KanbanGetAllQuery extends Pagination {
   espacoTrabalhoId?: string;
   quadroKanbanId?: string;
 }
+
+export interface KanbanFiltrosInput {
+  usuarioSistemaId?: string; // Criador do card
+  titulo?: string; // Busca parcial no título
+  descricao?: string; // Busca parcial na descrição
+  membroIds?: string[]; // Array de IDs de membros
+  ordenarPor?: 'criadoEm' | 'titulo' | 'ordem'; // Campo de ordenação
+  ordemDirecao?: 'asc' | 'desc'; // Direção da ordenação
+}

@@ -14,6 +14,7 @@ import {
   ComentarioCardInput,
   EspacoTrabalhoInput,
   EtiquetaQuadroInput,
+  KanbanFiltrosInput,
   MembroCardInput,
   MoverCardInput,
   MoverColunaInput,
@@ -138,8 +139,57 @@ export class KanbanController {
 
   @Get("/quadro/:id")
   @Authorized()
-  async obterQuadroCompleto(@Param("id") id: string) {
-    const quadro = await this.service.obterQuadroCompleto(id);
+  async obterQuadroCompleto(
+    @Param("id") id: string,
+    @QueryParam("usuarioSistemaId", { required: false }) usuarioSistemaId?: string,
+    @QueryParam("titulo", { required: false }) titulo?: string,
+    @QueryParam("descricao", { required: false }) descricao?: string,
+    @QueryParam("membroIds", { required: false }) membroIds?: string,
+    @QueryParam("ordenarPor", { required: false }) ordenarPor?: string,
+    @QueryParam("ordemDirecao", { required: false }) ordemDirecao?: string
+  ) {
+    // Normalizar filtros
+    const filtros: KanbanFiltrosInput = {};
+
+    if (usuarioSistemaId && usuarioSistemaId.trim()) {
+      filtros.usuarioSistemaId = usuarioSistemaId.trim();
+    }
+
+    if (titulo && titulo.trim()) {
+      filtros.titulo = titulo.trim();
+    }
+
+    if (descricao && descricao.trim()) {
+      filtros.descricao = descricao.trim();
+    }
+
+    if (membroIds && membroIds.trim()) {
+      // Converter string separada por vírgula em array
+      filtros.membroIds = membroIds
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0);
+    }
+
+    // Validar e normalizar ordenação
+    if (ordenarPor) {
+      const camposValidos = ["criadoEm", "titulo", "ordem"];
+      if (camposValidos.includes(ordenarPor)) {
+        filtros.ordenarPor = ordenarPor as "criadoEm" | "titulo" | "ordem";
+        const direcoesValidas = ["asc", "desc"];
+        if (ordemDirecao && direcoesValidas.includes(ordemDirecao)) {
+          filtros.ordemDirecao = ordemDirecao as "asc" | "desc";
+        } else {
+          // Valor padrão baseado no campo de ordenação
+          filtros.ordemDirecao = ordenarPor === "titulo" ? "asc" : "desc";
+        }
+      }
+    }
+
+    const quadro = await this.service.obterQuadroCompleto(
+      id,
+      Object.keys(filtros).length > 0 ? filtros : undefined
+    );
     if (!quadro) {
       throw new Error("Quadro não encontrado");
     }

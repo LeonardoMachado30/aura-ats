@@ -12,6 +12,7 @@ import {
   ComentarioCardInput,
   EspacoTrabalhoInput,
   EtiquetaQuadroInput,
+  KanbanFiltrosInput,
   MembroCardInput,
   MoverCardInput,
   MoverColunaInput,
@@ -488,7 +489,49 @@ export class KanbanService {
   /**
    * Obtém um quadro Kanban completo com todas as colunas e cards
    */
-  async obterQuadroCompleto(quadroId: string): Promise<QuadroCompleto | null> {
+  async obterQuadroCompleto(
+    quadroId: string,
+    filtros?: KanbanFiltrosInput
+  ): Promise<QuadroCompleto | null> {
+    // Construir filtros para os cards
+    const cardsWhere: any = {};
+
+    if (filtros?.usuarioSistemaId) {
+      cardsWhere.usuarioSistemaId = filtros.usuarioSistemaId;
+    }
+
+    if (filtros?.titulo) {
+      cardsWhere.titulo = {
+        contains: filtros.titulo,
+        mode: "insensitive",
+      };
+    }
+
+    if (filtros?.descricao) {
+      cardsWhere.descricao = {
+        contains: filtros.descricao,
+        mode: "insensitive",
+      };
+    }
+
+    if (filtros?.membroIds && filtros.membroIds.length > 0) {
+      cardsWhere.membros = {
+        some: {
+          usuarioSistemaId: {
+            in: filtros.membroIds,
+          },
+        },
+      };
+    }
+
+    // Construir ordenação
+    let orderBy: any = { ordem: "desc" }; // Padrão
+    if (filtros?.ordenarPor) {
+      const campo = filtros.ordenarPor;
+      const direcao = filtros.ordemDirecao || "desc";
+      orderBy = { [campo]: direcao };
+    }
+
     return await prisma.quadroKanban.findUnique({
       where: { id: quadroId },
       include: {
@@ -503,7 +546,8 @@ export class KanbanService {
           orderBy: { ordem: "asc" },
           include: {
             cards: {
-              orderBy: { ordem: "desc" }, // Ordenação descendente: maior ordem primeiro (último adicionado no topo)
+              where: Object.keys(cardsWhere).length > 0 ? cardsWhere : undefined,
+              orderBy: orderBy,
               include: {
                 usuarioSistema: {
                   select: {

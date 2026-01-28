@@ -1,5 +1,6 @@
 import {
   atualizarEtiquetasDoCard,
+  KanbanFiltrosInput,
   moverCard,
   moverColuna,
   obterQuadroCompleto,
@@ -20,7 +21,9 @@ interface KanbanContextType {
   quadro: QuadroCompleto | null;
   loading: boolean;
   error: string | null;
-  fetchQuadro: (id: string) => Promise<void>;
+  filtros: KanbanFiltrosInput | null;
+  setFiltros: (filtros: KanbanFiltrosInput | null) => void;
+  fetchQuadro: (id: string, filtros?: KanbanFiltrosInput) => Promise<void>;
   updateCardLabels: (cardId: string, etiquetaIds: string[]) => Promise<void>;
   updateCardDates: (
     cardId: string,
@@ -57,12 +60,13 @@ export const KanbanProvider: React.FC<KanbanProviderProps> = ({
   const [quadro, setQuadro] = useState<QuadroCompleto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [filtros, setFiltros] = useState<KanbanFiltrosInput | null>(null);
 
-  const fetchQuadro = useCallback(async (id: string) => {
+  const fetchQuadro = useCallback(async (id: string, filtrosParam?: KanbanFiltrosInput) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await obterQuadroCompleto(id);
+      const data = await obterQuadroCompleto(id, filtrosParam);
       setQuadro(data);
     } catch (err: any) {
       console.log('Erro ao buscar quadro:', err);
@@ -74,9 +78,9 @@ export const KanbanProvider: React.FC<KanbanProviderProps> = ({
 
   const refreshQuadro = useCallback(async () => {
     if (quadroId) {
-      await fetchQuadro(quadroId);
+      await fetchQuadro(quadroId, filtros || undefined);
     }
-  }, [quadroId, fetchQuadro]);
+  }, [quadroId, fetchQuadro, filtros]);
 
   const moveCardHandler = useCallback(
     async (
@@ -215,11 +219,12 @@ export const KanbanProvider: React.FC<KanbanProviderProps> = ({
     [quadro]
   );
 
+  // Fetch quando quadroId ou filtros mudarem
   useEffect(() => {
     if (quadroId) {
-      fetchQuadro(quadroId);
+      fetchQuadro(quadroId, filtros || undefined);
     }
-  }, [quadroId, fetchQuadro]);
+  }, [quadroId, filtros, fetchQuadro]);
 
   const moveColumnHandler = useCallback(
     async (columnId: string, newPosition: number) => {
@@ -280,16 +285,16 @@ export const KanbanProvider: React.FC<KanbanProviderProps> = ({
     if (quadroId) {
       try {
         // Não setar loading para true aqui para não bloquear a UI
-        const data = await obterQuadroCompleto(quadroId);
+        const data = await obterQuadroCompleto(quadroId, filtros || undefined);
         setQuadro(data);
       } catch (err: any) {
         console.log('Erro ao atualizar quadro após mutação:', err);
         setError(err.message || 'Erro ao atualizar quadro');
         // Em caso de erro, tentar fazer um fetch completo
-        await fetchQuadro(quadroId);
+        await fetchQuadro(quadroId, filtros || undefined);
       }
     }
-  }, [quadroId, fetchQuadro]);
+  }, [quadroId, fetchQuadro, filtros]);
 
   const updateCardLabels = useCallback(
     async (cardId: string, etiquetaIds: string[]) => {
@@ -327,6 +332,8 @@ export const KanbanProvider: React.FC<KanbanProviderProps> = ({
     quadro,
     loading,
     error,
+    filtros,
+    setFiltros,
     fetchQuadro,
     updateCardLabels,
     updateCardDates,

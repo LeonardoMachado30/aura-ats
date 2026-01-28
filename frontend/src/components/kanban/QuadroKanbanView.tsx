@@ -1,4 +1,5 @@
 import {
+  KanbanFiltrosInput,
   atualizarCardKanban,
   atualizarColunaKanban,
   atualizarQuadroKanban,
@@ -10,6 +11,7 @@ import {
 import { PrimaryButton } from '@/components/button/PrimaryButton';
 import { PlusIcon } from '@/components/icons';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
+import { KanbanFilters } from '@/components/kanban/KanbanFilters';
 import ModalDelete from '@/components/modal/ModalDelete';
 import { KanbanProvider, useKanban } from '@/context/KanbanContext';
 import { useDeleteAnimation } from '@/hooks/useDeleteAnimation';
@@ -19,11 +21,12 @@ import {
   ColunaKanban,
   ColunaKanbanInput,
   QuadroKanbanInput,
+  UsuarioSistema,
   VinculoCard,
 } from '@/schemas/kanban.schema';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // Dynamic imports para modais pesados
 const CardFormModal = dynamic(
@@ -54,7 +57,7 @@ const QuadroKanbanViewContent: React.FC<{ quadroId: string }> = ({
   quadroId,
 }) => {
   const router = useRouter();
-  const { quadro, refreshAfterMutation } = useKanban();
+  const { quadro, refreshAfterMutation, filtros, setFiltros } = useKanban();
   const { isItemAnimating, startDeleteAnimation, animatingItemId } =
     useDeleteAnimation();
 
@@ -267,6 +270,42 @@ const QuadroKanbanViewContent: React.FC<{ quadroId: string }> = ({
     setCardToView(card);
   }, []);
 
+  // Extrair criadores únicos do quadro
+  const criadores = useMemo(() => {
+    if (!quadro) return [];
+    const criadoresMap = new Map<string, UsuarioSistema>();
+    quadro.colunas.forEach(col => {
+      col.cards.forEach(card => {
+        if (card.usuarioSistema?.id) {
+          criadoresMap.set(card.usuarioSistema.id, card.usuarioSistema);
+        }
+      });
+    });
+    return Array.from(criadoresMap.values());
+  }, [quadro]);
+
+  // Extrair membros únicos do quadro
+  const membros = useMemo(() => {
+    if (!quadro) return [];
+    const membrosMap = new Map<string, UsuarioSistema>();
+    quadro.colunas.forEach(col => {
+      col.cards.forEach(card => {
+        card.membros?.forEach(membro => {
+          if (membro.usuarioSistema?.id) {
+            membrosMap.set(membro.usuarioSistema.id, membro.usuarioSistema);
+          }
+        });
+      });
+    });
+    return Array.from(membrosMap.values());
+  }, [quadro]);
+
+  // Calcular total de cards filtrados
+  const totalCardsFiltrados = useMemo(() => {
+    if (!quadro) return 0;
+    return quadro.colunas.reduce((total, col) => total + col.cards.length, 0);
+  }, [quadro]);
+
   // Sincronizar cardToView com o card atualizado do contexto quando o quadro mudar
   useEffect(() => {
     if (cardToView && quadro) {
@@ -294,6 +333,14 @@ const QuadroKanbanViewContent: React.FC<{ quadroId: string }> = ({
           </PrimaryButton>
         </div>
       </div>
+
+      <KanbanFilters
+        filtros={filtros}
+        onFiltrosChange={setFiltros}
+        criadores={criadores}
+        membros={membros}
+        totalCards={totalCardsFiltrados}
+      />
 
       <div className="w-full h-full">
 
