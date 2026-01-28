@@ -644,7 +644,11 @@ export const CardViewModal: React.FC<CardViewModalProps> = ({
                       console.log('Erro ao atualizar status do card:', error);
                     }
                   }}
-                  className="h-5 w-5 cursor-pointer rounded border-gray-300 text-green-600 focus:ring-2 focus:ring-green-500"
+                  className={`h-5 w-5 cursor-pointer rounded focus:ring-2 focus:ring-green-500 ${
+                    localChecklistCompleto
+                      ? 'border-green-500 text-green-600'
+                      : 'border-gray-300 text-green-600'
+                  }`}
                 />
                 <input
                   type="text"
@@ -681,7 +685,11 @@ export const CardViewModal: React.FC<CardViewModalProps> = ({
                         console.log('Erro ao atualizar status do card:', error);
                       }
                     }}
-                    className="h-5 w-5 cursor-pointer rounded border-gray-300 text-green-600 focus:ring-2 focus:ring-green-500"
+                    className={`h-5 w-5 cursor-pointer rounded focus:ring-2 focus:ring-green-500 ${
+                      localChecklistCompleto
+                        ? 'border-green-500 text-green-600'
+                        : 'border-gray-300 text-green-600'
+                    }`}
                   />
                   <h2
                     className="text-2xl font-bold text-gray-800 cursor-pointer hover:bg-gray-100 rounded px-2 py-1 -mx-2 -my-1 flex-1"
@@ -726,10 +734,13 @@ export const CardViewModal: React.FC<CardViewModalProps> = ({
                 ref={checklistButtonRef}
                 type="button"
                 onClick={() => setActivePanel(activePanel === 'checklist' ? null : 'checklist')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activePanel === 'checklist'
-                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'checklist'
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    : localChecklistCompleto
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               >
                 <FiCheckSquare className="w-4 h-4" />
                 Checklist
@@ -1176,7 +1187,7 @@ export const CardViewModal: React.FC<CardViewModalProps> = ({
           </div>
 
           {/* Vínculos */}
-          <div className="space-y-6 mb-4">
+          {/* <div className="space-y-6 mb-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-3">
               Vínculos
             </h3>
@@ -1205,14 +1216,23 @@ export const CardViewModal: React.FC<CardViewModalProps> = ({
                 ))
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Checklist */}
           {localChecklists.length !== 0 &&
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                Lista de tarefas
-              </h3>
+              <div className="flex items-center gap-2 mb-3">
+               
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Lista de tarefas
+                </h3>
+                {localChecklistCompleto && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 px-2 py-1 text-xs font-medium">
+                    <FiCheckSquare className="w-3 h-3" />
+                    Concluído
+                  </span>
+                )}
+              </div>
 
               {localChecklists.map(checklist => {
                 const isEditing = editingChecklistId === checklist.id;
@@ -1220,12 +1240,30 @@ export const CardViewModal: React.FC<CardViewModalProps> = ({
                 const itensConcluidos =
                   checklist.itens?.filter(i => i.concluido).length || 0;
                 const progresso = totalItens > 0 ? `${itensConcluidos}/${totalItens}` : '0/0';
+                const porcentagemProgresso = totalItens > 0 ? (itensConcluidos / totalItens) * 100 : 0;
+                const estaCompleto = totalItens > 0 && itensConcluidos === totalItens;
 
                 return (
                   <div
                     key={checklist.id}
                     className="rounded ml-4"
                   >
+                    {/* Barra de progresso */}
+                    <div className="mb-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            estaCompleto
+                              ? 'bg-green-500'
+                              : porcentagemProgresso > 0
+                              ? 'bg-blue-500'
+                              : 'bg-gray-300'
+                          }`}
+                          style={{ width: `${porcentagemProgresso}%` }}
+                        />
+                      </div>
+                    </div>
+
                     {/* Cabeçalho do checklist */}
                     <div className="mb-2 flex items-center gap-2 group">
                       {isEditing ? (

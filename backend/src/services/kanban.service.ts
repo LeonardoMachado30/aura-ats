@@ -998,9 +998,22 @@ export class KanbanService {
   }
 
   async deletarChecklist(id: string) {
-    return await prisma.checklistCard.delete({
+    // Obter cardId antes de deletar
+    const checklist = await prisma.checklistCard.findUnique({
+      where: { id },
+      select: { cardKanbanId: true },
+    });
+
+    const cardId = checklist?.cardKanbanId;
+
+    await prisma.checklistCard.delete({
       where: { id },
     });
+
+    // Atualizar checklistCompleto após deletar
+    if (cardId) {
+      await this.atualizarChecklistCompletoDoCard(cardId);
+    }
   }
 
   async criarChecklistItem(
@@ -1017,7 +1030,7 @@ export class KanbanService {
       ordem = ultimoItem ? ultimoItem.ordem + 1000 : 1000;
     }
 
-    return await prisma.checklistItem.create({
+    const item = await prisma.checklistItem.create({
       data: {
         checklistCardId: checklistId,
         descricao: data.descricao,
@@ -1025,21 +1038,82 @@ export class KanbanService {
         ordem,
       },
     });
+
+    // Obter cardId do checklist e atualizar checklistCompleto
+    const checklist = await prisma.checklistCard.findUnique({
+      where: { id: checklistId },
+      select: { cardKanbanId: true },
+    });
+
+    if (checklist?.cardKanbanId) {
+      await this.atualizarChecklistCompletoDoCard(checklist.cardKanbanId);
+    }
+
+    return item;
   }
 
   async atualizarChecklistItem(
     id: string,
     data: Partial<ChecklistItemInput>
   ) {
-    return await prisma.checklistItem.update({
+    const item = await prisma.checklistItem.update({
       where: { id },
       data,
     });
+
+    // Obter cardId do item e atualizar checklistCompleto
+    const itemComChecklist = await prisma.checklistItem.findUnique({
+      where: { id },
+      include: { checklist: { select: { cardKanbanId: true } } },
+    });
+
+    if (itemComChecklist?.checklist.cardKanbanId) {
+      await this.atualizarChecklistCompletoDoCard(itemComChecklist.checklist.cardKanbanId);
+    }
+
+    return item;
   }
 
   async deletarChecklistItem(id: string) {
-    return await prisma.checklistItem.delete({
+    // Obter cardId antes de deletar
+    const item = await prisma.checklistItem.findUnique({
       where: { id },
+      include: { checklist: { select: { cardKanbanId: true } } },
+    });
+
+    const cardId = item?.checklist.cardKanbanId;
+
+    await prisma.checklistItem.delete({
+      where: { id },
+    });
+
+    // Atualizar checklistCompleto após deletar
+    if (cardId) {
+      await this.atualizarChecklistCompletoDoCard(cardId);
+    }
+  }
+
+  /**
+   * Verifica se todos os itens de todos os checklists do card estão concluídos
+   * e atualiza automaticamente o campo checklistCompleto do card
+   */
+  private async atualizarChecklistCompletoDoCard(cardId: string): Promise<void> {
+    const checklists = await prisma.checklistCard.findMany({
+      where: { cardKanbanId: cardId },
+      include: { itens: true },
+    });
+
+    const todosItens = checklists.flatMap(cl => cl.itens);
+    const temItens = todosItens.length > 0;
+    const todosConcluidos = todosItens.every(item => item.concluido);
+
+    const checklistCompleto = temItens && todosConcluidos;
+
+    await prisma.cardKanban.update({
+      where: { id: cardId },
+      data: {
+        checklistCompleto,
+      },
     });
   }
 

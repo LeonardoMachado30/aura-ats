@@ -108,9 +108,11 @@ const KanbanCardComponent: React.FC<KanbanCardProps> = ({
       style={style}
       {...attributes}
       {...listeners}
-      className={`cursor-pointer hover:shadow-md transition-all duration-2000 ease-out px-3 py-2 bg-white rounded-xl relative border border-gray-200 mb-2 ${
-        isAnimating ? 'delete-animating' : ''
-      }`}
+      className={`cursor-pointer hover:shadow-md transition-all duration-2000 ease-out px-3 py-2 rounded-xl relative border mb-2 ${
+        localChecklistCompleto
+          ? 'bg-green-50 border-green-400'
+          : 'bg-white border-gray-200'
+      } ${isAnimating ? 'delete-animating' : ''}`}
       onClick={() => onClick?.(card)}
       onContextMenu={handleContextMenu}
     >
@@ -171,7 +173,11 @@ const KanbanCardComponent: React.FC<KanbanCardProps> = ({
             }
           }}
           onClick={(e) => e.stopPropagation()}
-          className="h-4 w-4 cursor-pointer rounded border-gray-300 text-green-600 focus:ring-2 focus:ring-green-500 flex-shrink-0"
+          className={`h-4 w-4 cursor-pointer rounded shrink-0 focus:ring-2 focus:ring-green-500 ${
+            localChecklistCompleto
+              ? 'border-green-500 text-green-600'
+              : 'border-gray-300 text-green-600'
+          }`}
         />
         <h3 className="font-semibold text-gray-800 flex-1">{card.titulo}</h3>
       </div>
